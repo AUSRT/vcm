@@ -8,24 +8,33 @@
 #include "mbed.h"
 #include <cstdio>
 
-// Setup gpio.
-InterruptIn btn(D2, PullDown);
-DigitalOut led(LED1);
-DigitalOut flash(LED2);
+// Define button press interrupt.
+InterruptIn btn(D2, PullUp);
 
-// flip() flips the output of the LED from on to off
+// Setup status LED
+DigitalOut emergency(D3); // Red.
+
+// Create a cooldown for debouncing a button press.
+LowPowerTimeout debounce_timeout;
+volatile bool btn_rise_cooldown;
+
 void flip() {
-    led = !led;
-    return;
+  if (!btn_rise_cooldown) {
+    // Turn off the led.
+    emergency = !emergency;
+
+    // Start a cooldown period.
+    btn_rise_cooldown = true;
+    debounce_timeout.attach([] { btn_rise_cooldown = false; }, 100ms);
+  };
 }
 
 // main() runs in its own thread in the OS
-int main()
-{    
-    btn.rise(&flip);
-    while (true) {
-        flash = !flash;
-        ThisThread::sleep_for(500ms);
-    }
-}
+int main() {
 
+  // Set interupt handlers.
+  btn.rise(&flip);
+
+  while (true) {
+  }
+}
