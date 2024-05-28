@@ -9,11 +9,17 @@
 #include "PinNamesTypes.h"
 #include "ThisThread.h"
 #include "mbed.h"
+#include <chrono>
 #include <cstdio>
+#include <ctime>
 
-// Define constants to be used in the program.
-#define POLLING_FREQ 100ms
-#define INPUT_BTN D2
+// POLLING_FREQ is the polling rate to be used in a polling ticker.
+constexpr auto POLLING_FREQ = 100ms;
+// INPUT_BTN is the btn to be used for inputs.
+constexpr auto INPUT_BTN = D2;
+// HOLD_TIME defines the length of time required to register a btn hold. (The
+// real time value of this constant is computed by the POLLING_FREQ * HOLD_TIME)
+const int HOLD_TIME = 50;
 
 // Define button press interrupt.
 InterruptIn btn(INPUT_BTN, PullUp);
@@ -35,7 +41,7 @@ volatile int btn_held_count;
 // exited by holding down the button for 5 seconds.
 void emergency_irq() {
   // Set the emergency state unless the button has been held.
-  if (btn_held_count < 50) {
+  if (btn_held_count < HOLD_TIME) {
     emergency = 1;
   }
 }
@@ -45,7 +51,7 @@ void emergency_irq() {
 void poll_irq() {
   if (!btn.read()) {
     btn_held_count++;
-    if (btn_held_count >= 50) {
+    if (btn_held_count >= HOLD_TIME) {
       emergency = 0;
     }
   } else {
@@ -55,7 +61,6 @@ void poll_irq() {
 
 // main() runs in its own thread in the OS
 int main() {
-
   // Poll the button to check for button holds.
   polling_ticker.attach(&poll_irq, POLLING_FREQ);
 
